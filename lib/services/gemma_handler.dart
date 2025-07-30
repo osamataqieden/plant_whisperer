@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -6,7 +7,7 @@ import 'package:flutter_gemma/core/model.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma/mobile/flutter_gemma_mobile.dart';
 import 'package:flutter_gemma/pigeon.g.dart';
-import 'package:plant_whisperer/entities/PlantEntity.dart';
+import 'package:plant_whisperer/entities/plant_entity.dart';
 import 'package:plant_whisperer/services/file_handler.dart';
 
 class GemmaHandler {
@@ -59,14 +60,15 @@ class GemmaHandler {
   Future<PlantEntity> GetPlantData(Uint8List imageData) async {
     String prompt = '''
 You are a plant expert. The user will provide an image of a plant.
-Analyze the image and return the following information in a single line of text, with fields separated by a pipe character `|`:
-species | common name | personality | watering schedule (in hours) | health status | care tips | achievements
-- The `care tips` field should be a semicolon-separated list of exactly 2 tips.
-- The `achievements` field should be a semicolon-separated list of exactly 2 gamified milestones the user can unlock by caring for this plant.
+The user is playing a game where they care for plants and earn achievements, and each plant has a distinct personality.
+Analyze the image and return the following information in a single line of text, with fields separated by a pipe character |:
+species | common name | creative name | personality | watering schedule (in days) | health status | care tips
+- The care tips field should be a list of tips covering watering, light, repotting, fertilizing, pruning, pest control, and soil needs.
+- The health status field should be on a scale of 1 to 10, where 1 is very unhealthy and 10 is very healthy.
+- The watering schedule should be in days, indicating how often the plant needs to be watered - the user will receive push notifications based on this interval.
+- The personality will dictate the user interaction with the plant later on, regarding user messages and notifications. They should be creative and engaging, and reflect the plant's nature.
 Return format example:
-Ficus lyrata | Fiddle Leaf Fig | Dramatic and high-maintenance | 72 | needs attention | Place in bright, indirect light;Avoid cold drafts | Survived 30 days without leaf drop;Perfect watering for 3 weeks
-If the plant cannot be identified, return:
-unknown
+Ficus lyrata | Fiddle Leaf Fig | Figrutave Leaf | Dramatic and high-maintenance | 7 | 6 | tips:Place in bright, indirect light | tips:Water when top inch of soil is dry | tips:Repot every 2-3 years in spring | tips:Fertilize monthly in growing season 
 Do not include field names, extra explanation, or code formatting. Only return the formatted line.
     ''';
 
@@ -79,6 +81,37 @@ Do not include field names, extra explanation, or code formatting. Only return t
 
     String? result = await session.getResponse();
     print("Model response: $result");
-    return new PlantEntity();
+    PlantEntity entity = ParsePlantEntity(result, imageData);
+    return entity;
+  }
+
+  PlantEntity ParsePlantEntity(String result, Uint8List imgBytes) {
+    var data = result.split('|');
+    String species = data[0];
+    var commonName = data[1];
+    var creativeName = data[2];
+    var personality = data[3];
+    var wateringScheduleTemp = data[4];
+    var healthStatusTemp = data[5];
+    var wateringSchedule = int.parse(wateringScheduleTemp);
+    var healthStatus = int.parse(healthStatusTemp);
+    List<String> tips = new List.empty(growable: true);
+    for (int x = 6; x < data.length; x++) {
+      tips.add(data[x]);
+    }
+    var base64Img = base64Encode(imgBytes);
+    PlantEntity entity = new PlantEntity(
+      species,
+      commonName,
+      creativeName,
+      personality,
+      wateringSchedule,
+      healthStatus,
+      tips,
+      new List.empty(),
+      "",
+      base64Img,
+    );
+    return entity;
   }
 }

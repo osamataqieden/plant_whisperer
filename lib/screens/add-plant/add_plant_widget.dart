@@ -16,7 +16,7 @@ class AddPlantWidget extends StatefulWidget {
 }
 
 class _AddPlantWidgetState extends State<AddPlantWidget> {
-  Uint8List? imageData = null;
+  Uint8List? imageData;
   AddPlantWidgetStates WidgetState = AddPlantWidgetStates.initial;
 
   Future<void> showCamera() async {
@@ -28,7 +28,8 @@ class _AddPlantWidgetState extends State<AddPlantWidget> {
       WidgetState = AddPlantWidgetStates.loadingDataFromModel;
     });
     GemmaHandler gemmaHandler = widget.gemmaHandler;
-    var result = gemmaHandler.GetPlantData(bytes);
+    var result = await gemmaHandler.GetPlantData(bytes);
+    print(json.encoder.convert(result));
   }
 
   @override
