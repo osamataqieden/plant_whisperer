@@ -70,5 +70,12 @@ class DatabaseHelper {
         date TEXT
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE plant_tips(
+      id TEXT PRIMARY KEY,
+      plantId TEXT,
+      tip TEXT)
+    ''');
   }
 }

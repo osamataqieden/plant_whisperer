@@ -4,9 +4,13 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:plant_whisperer/data/database_helper.dart';
+import 'package:plant_whisperer/data/plant_repository_impl.dart';
+import 'package:plant_whisperer/entities/plant_entity.dart';
 import 'package:plant_whisperer/services/gemma_handler.dart';
+import 'package:sqflite/sqflite.dart';
 
-enum AddPlantWidgetStates { initial, loadingDataFromModel }
+enum AddPlantWidgetStates { initial, loadingDataFromModel, confirmModelData }
 
 class AddPlantWidget extends StatefulWidget {
   const AddPlantWidget({super.key, required this.gemmaHandler});
@@ -17,6 +21,7 @@ class AddPlantWidget extends StatefulWidget {
 
 class _AddPlantWidgetState extends State<AddPlantWidget> {
   Uint8List? imageData;
+  PlantEntity? plantData;
   AddPlantWidgetStates WidgetState = AddPlantWidgetStates.initial;
 
   Future<void> showCamera() async {
@@ -29,7 +34,17 @@ class _AddPlantWidgetState extends State<AddPlantWidget> {
     });
     GemmaHandler gemmaHandler = widget.gemmaHandler;
     var result = await gemmaHandler.GetPlantData(bytes);
+    setState(() {
+      plantData = result;
+      WidgetState = AddPlantWidgetStates.confirmModelData;
+    });
     print(json.encoder.convert(result));
+  }
+
+  Future<void> confirmPlantData() async{
+    var helper = await DatabaseHelper();
+    var plantRepo = PlantRepositoryImpl(databaseHelper: helper);
+    String id = await plantRepo.addPlantEntity(plantData!);
   }
 
   @override
@@ -55,6 +70,29 @@ class _AddPlantWidgetState extends State<AddPlantWidget> {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    else if(WidgetState == AddPlantWidgetStates.confirmModelData){
+      return Scaffold(
+        appBar: AppBar(title: const Text('Plant Data')),
+        body: Center(
+          child: SizedBox(
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(30),
+                child: Column(children: [
+                  Text("Plant Details"),
+                  Image.memory(imageData!),
+                  SizedBox(height: 20),
+                  Text("Plant Species: ${plantData!.species}"),
+                  Text("Plant Name: ${plantData!.creativeName}"),
+                  Text("Plant Watering Schedule: ${plantData!.wateringSchedule}"),
+                  ElevatedButton(onPressed: confirmPlantData, child: Text("Confirm Data!"))
+                ],)
               ),
             ),
           ),
